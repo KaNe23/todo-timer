@@ -159,7 +159,7 @@ impl<'a> App<'a> {
                     .map(|gl| ListItem::new(Span::raw(gl.title)))
                     .collect::<Vec<_>>(),
             );
-            (list, group_list.list.state.clone(), format!(" - {}", group_list.name.clone()))
+            (list, group_list.list.state.clone(), format!(" - {} ", group_list.name.clone()))
         } else {
             let list = List::new(
                 self.group_list
@@ -169,17 +169,19 @@ impl<'a> App<'a> {
                     .map(|gl| ListItem::new(Span::raw(gl.name)))
                     .collect::<Vec<_>>(),
             );
-            (list, self.group_list.state.clone(), "".to_string())
+            (list, self.group_list.state.clone(), " ".to_string())
         };
         let block = Block::default()
-            .title(format!("{}{}", "Todo-Timer", list_name))
+            .title(format!("{}{}", " Todo-Timer", list_name))
             .borders(Borders::ALL)
             .style(Style::default().bg(Color::Black));
+
 
         let list = list
             .block(block)
             .style(Style::default().fg(Color::White))
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD));
+            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+            .highlight_symbol("> ");
 
         frame.render_stateful_widget(list, size, &mut state);
 
