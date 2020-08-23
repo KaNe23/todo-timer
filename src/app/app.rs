@@ -3,7 +3,7 @@ use crossterm::event::{KeyCode, KeyModifiers};
 
 use tui::{
     backend::Backend,
-    layout::{Alignment, Margin, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::Span,
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
@@ -104,10 +104,13 @@ impl<'a> App<'a> {
             }
             (KeyCode::Enter, _) => {
                 if self.dialog.is_some() {
-                    if let Some(index) = self.active_list{
+                    if let Some(index) = self.active_list {
                         let list = &mut self.group_list.items.get_mut(index).unwrap().list;
-                        list.add(Item{title: self.dialog_input.clone(), desc: "".to_string()});
-                    }else{
+                        list.add(Item {
+                            title: self.dialog_input.clone(),
+                            desc: "".to_string(),
+                        });
+                    } else {
                         self.group_list.add(GroupList {
                             name: self.dialog_input.to_string(),
                             list: StatefulList::new(),
@@ -121,14 +124,14 @@ impl<'a> App<'a> {
             (KeyCode::Up, _) => {
                 if let Some(pos) = self.active_list {
                     self.group_list.items[pos].list.previous();
-                }else{
+                } else {
                     self.group_list.previous();
                 }
             }
             (KeyCode::Down, _) => {
                 if let Some(pos) = self.active_list {
                     self.group_list.items[pos].list.next();
-                }else{
+                } else {
                     self.group_list.next();
                 }
             }
@@ -138,7 +141,9 @@ impl<'a> App<'a> {
                 }
             }
             (KeyCode::Left, _) => {
-                if self.active_list.is_some() {
+                if let Some(index) = self.active_list {
+                    let list = self.group_list.items.get_mut(index).unwrap();
+                    list.list.state.select(None);
                     self.active_list = None;
                 }
             }
@@ -148,8 +153,14 @@ impl<'a> App<'a> {
 
     pub fn draw<B: Backend>(&mut self, frame: &mut Frame<B>) {
         let size = frame.size();
-        let (list, mut state, list_name) = if let Some(index) = self.active_list {
-            let group_list = self.group_list.items.get(index).unwrap();
+
+        let layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
+            .split(size);
+
+        if let Some(index) = self.active_list {
+            let group_list = self.group_list.items.get_mut(index).unwrap();
             let list = List::new(
                 group_list
                     .list
@@ -159,23 +170,34 @@ impl<'a> App<'a> {
                     .map(|gl| ListItem::new(Span::raw(gl.title)))
                     .collect::<Vec<_>>(),
             );
-            (list, group_list.list.state.clone(), format!(" - {} ", group_list.name.clone()))
-        } else {
-            let list = List::new(
-                self.group_list
-                    .items
-                    .clone()
-                    .into_iter()
-                    .map(|gl| ListItem::new(Span::raw(gl.name)))
-                    .collect::<Vec<_>>(),
-            );
-            (list, self.group_list.state.clone(), " ".to_string())
-        };
+
+            let block = Block::default()
+                .title(format!(" {} ", group_list.name.clone()))
+                .borders(Borders::ALL)
+                .style(Style::default().bg(Color::Black));
+
+            let list = list
+                .block(block)
+                .style(Style::default().fg(Color::White))
+                .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+                .highlight_symbol("> ");
+
+            frame.render_stateful_widget(list, layout[1], &mut group_list.list.state);
+        }
+
+        let list = List::new(
+            self.group_list
+                .items
+                .clone()
+                .into_iter()
+                .map(|gl| ListItem::new(Span::raw(gl.name)))
+                .collect::<Vec<_>>(),
+        );
+
         let block = Block::default()
-            .title(format!("{}{}", " Todo-Timer", list_name))
+            .title(" Todo-Timer ")
             .borders(Borders::ALL)
             .style(Style::default().bg(Color::Black));
-
 
         let list = list
             .block(block)
@@ -183,7 +205,7 @@ impl<'a> App<'a> {
             .highlight_style(Style::default().add_modifier(Modifier::BOLD))
             .highlight_symbol("> ");
 
-        frame.render_stateful_widget(list, size, &mut state);
+        frame.render_stateful_widget(list, layout[0], &mut self.group_list.state);
 
         // render dialog
         if let Some((dialog_block, dialog_size, para, para_box)) = &self.dialog {
