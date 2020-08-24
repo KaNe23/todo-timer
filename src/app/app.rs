@@ -159,7 +159,7 @@ impl<'a> App<'a> {
             .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
             .split(size);
 
-        if let Some(index) = self.active_list {
+        if let Some(index) = self.group_list.state.selected() {
             let group_list = self.group_list.items.get_mut(index).unwrap();
             let list = List::new(
                 group_list
@@ -176,9 +176,15 @@ impl<'a> App<'a> {
                 .borders(Borders::ALL)
                 .style(Style::default().bg(Color::Black));
 
+            let style = if self.active_list.is_some(){
+                Style::default().fg(Color::White)
+            }else{
+                Style::default().fg(Color::DarkGray)
+            };
+
             let list = list
                 .block(block)
-                .style(Style::default().fg(Color::White))
+                .style(style)
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD))
                 .highlight_symbol("> ");
 
@@ -199,9 +205,15 @@ impl<'a> App<'a> {
             .borders(Borders::ALL)
             .style(Style::default().bg(Color::Black));
 
+        let style = if self.active_list.is_some(){
+                Style::default().fg(Color::DarkGray)
+            }else{
+                Style::default().fg(Color::White)
+            };
+
         let list = list
             .block(block)
-            .style(Style::default().fg(Color::White))
+            .style(style)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD))
             .highlight_symbol("> ");
 
