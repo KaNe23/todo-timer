@@ -1,4 +1,4 @@
-use crate::app::stateful_list::StatefulList;
+use crate::app::stateful_list::{StatefulList, Direction as ListDirection};
 use crossterm::event::{KeyCode, KeyModifiers};
 use serde::{Deserialize, Serialize};
 
@@ -85,6 +85,18 @@ impl<'a> App<'a> {
             (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
                 self.dialog = self.create_dialog(self.curr_size);
             }
+            (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
+                if let Some(index) = self.active_list {
+                    let list = &mut self.group_list.items.get_mut(index).unwrap().list;
+                    if let Some(index) = list.state.selected(){
+                        list.items.remove(index);
+                    }
+                } else {
+                    if let Some(index) = self.group_list.state.selected(){
+                        self.group_list.items.remove(index);
+                    }
+                }
+            }
             (KeyCode::Char(x), KeyModifiers::NONE) => {
                 if let Some(_) = &self.dialog {
                     self.dialog_input = format!("{}{}", self.dialog_input, x);
@@ -120,6 +132,22 @@ impl<'a> App<'a> {
 
                     self.dialog_input = "".to_string();
                     self.dialog = None;
+                }
+            }
+            (KeyCode::Up, KeyModifiers::CONTROL) => {
+                if let Some(index) = self.active_list {
+                    let list = &mut self.group_list.items.get_mut(index).unwrap().list;
+                    list.move_selected_item(ListDirection::Down);
+                } else {
+                    self.group_list.move_selected_item(ListDirection::Down);
+                }
+            }
+            (KeyCode::Down, KeyModifiers::CONTROL) => {
+                if let Some(index) = self.active_list {
+                    let list = &mut self.group_list.items.get_mut(index).unwrap().list;
+                    list.move_selected_item(ListDirection::Up);
+                } else {
+                    self.group_list.move_selected_item(ListDirection::Up);
                 }
             }
             (KeyCode::Up, _) => {

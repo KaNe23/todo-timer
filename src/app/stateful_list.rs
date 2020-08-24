@@ -1,5 +1,10 @@
+use serde::{Deserialize, Serialize};
 use tui::widgets::ListState;
-use serde::{Serialize, Deserialize};
+
+pub enum Direction {
+    Up,
+    Down,
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct StatefulList<T> {
@@ -23,8 +28,35 @@ impl<T> StatefulList<T> {
         }
     }
 
+    pub fn move_selected_item(&mut self, direction: Direction) {
+        if let Some(index) = self.state.selected() {
+            match direction {
+                Direction::Down => {
+                    let target = if index == 0 {
+                        self.items.len() - 1
+                    } else {
+                        index - 1
+                    };
+                    self.items.swap(index, target);
+                    self.previous();
+                }
+                Direction::Up => {
+                    let target = if index == self.items.len() - 1 {
+                        0
+                    } else {
+                        index + 1
+                    };
+                    self.items.swap(index, target);
+                    self.next();
+                }
+            }
+        }
+    }
+
     pub fn next(&mut self) {
-        if self.items.is_empty(){return}
+        if self.items.is_empty() {
+            return;
+        }
 
         let i = match self.state.selected() {
             Some(i) => {
@@ -40,7 +72,9 @@ impl<T> StatefulList<T> {
     }
 
     pub fn previous(&mut self) {
-        if self.items.is_empty(){return}
+        if self.items.is_empty() {
+            return;
+        }
 
         let i = match self.state.selected() {
             Some(i) => {
@@ -61,4 +95,5 @@ impl<T> StatefulList<T> {
 
     pub fn add(&mut self, item: T) {
         self.items.push(item);
-    }}
+    }
+}
