@@ -6,7 +6,9 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+
 use std::error::Error;
+use std::fs;
 use std::{
     io::{stdout, Write},
     sync::mpsc,
@@ -49,12 +51,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    let mut app = App::new("Todo-Timer".to_string(), terminal.get_frame().size());
+    let mut app: App = match fs::read_to_string("db.toml") {
+        Ok(db) => toml::from_str(&db).unwrap(),
+        Err(_) => App::new("Todo-Timer".to_string(), terminal.get_frame().size()),
+    };
 
     terminal.clear()?;
 
     loop {
-        terminal.draw(|f| { app.draw(f)})?;
+        terminal.draw(|f| app.draw(f))?;
         match rx.recv()? {
             Event::Input(event) => match (event.code, event.modifiers) {
                 (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
@@ -65,6 +70,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                         DisableMouseCapture
                     )?;
                     terminal.show_cursor()?;
+
+                    fs::write("db.toml", toml::to_string(&app).unwrap())?;
+
                     break Ok(());
                 }
                 (x, modi) => {

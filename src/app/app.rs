@@ -1,5 +1,6 @@
 use crate::app::stateful_list::StatefulList;
 use crossterm::event::{KeyCode, KeyModifiers};
+use serde::{Deserialize, Serialize};
 
 use tui::{
     backend::Backend,
@@ -153,6 +154,7 @@ impl<'a> App<'a> {
 
     pub fn draw<B: Backend>(&mut self, frame: &mut Frame<B>) {
         let size = frame.size();
+        self.curr_size = size;
 
         let layout = Layout::default()
             .direction(Direction::Horizontal)
@@ -176,9 +178,9 @@ impl<'a> App<'a> {
                 .borders(Borders::ALL)
                 .style(Style::default().bg(Color::Black));
 
-            let style = if self.active_list.is_some(){
+            let style = if self.active_list.is_some() {
                 Style::default().fg(Color::White)
-            }else{
+            } else {
                 Style::default().fg(Color::DarkGray)
             };
 
@@ -205,11 +207,11 @@ impl<'a> App<'a> {
             .borders(Borders::ALL)
             .style(Style::default().bg(Color::Black));
 
-        let style = if self.active_list.is_some(){
-                Style::default().fg(Color::DarkGray)
-            }else{
-                Style::default().fg(Color::White)
-            };
+        let style = if self.active_list.is_some() {
+            Style::default().fg(Color::DarkGray)
+        } else {
+            Style::default().fg(Color::White)
+        };
 
         let list = list
             .block(block)
