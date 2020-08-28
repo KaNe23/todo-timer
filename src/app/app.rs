@@ -115,6 +115,36 @@ impl<'a> App {
                     }
                 }
             }
+            (KeyCode::Char('s'), KeyModifiers::ALT) => {
+                if let Some(index) = self.active_list {
+                    if let Some(list) = self.group_list.items.get_mut(index){
+                        if let Some(index) = list.list.state.selected(){
+                            if let Some(item) = list.list.items.get_mut(index){
+                                if item.start_at.is_some() {
+                                    item.start_at = None;
+                                }else{
+                                    item.start_at = Some(Local::now());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            (KeyCode::Char('d'), KeyModifiers::ALT) => {
+                if let Some(index) = self.active_list {
+                    if let Some(list) = self.group_list.items.get_mut(index){
+                        if let Some(index) = list.list.state.selected(){
+                            if let Some(item) = list.list.items.get_mut(index){
+                                if item.end_at.is_some() {
+                                    item.end_at = None;
+                                }else{
+                                    item.end_at = Some(Local::now());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             (KeyCode::Char(x), KeyModifiers::NONE) => {
                 if self.open_dialog {
                     self.dialog_input.title = format!("{}{}", self.dialog_input.title, x);
