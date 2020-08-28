@@ -113,19 +113,16 @@ impl<'a> App {
             (KeyCode::Char(x), KeyModifiers::NONE) => {
                 if self.open_dialog {
                     self.dialog_input.title = format!("{}{}", self.dialog_input.title, x);
-                    self.open_dialog = true;
                 }
             }
             (KeyCode::Char(x), KeyModifiers::SHIFT) => {
                 if self.open_dialog {
                     self.dialog_input.title = format!("{}{}", self.dialog_input.title, x);
-                    self.open_dialog = true;
                 }
             }
             (KeyCode::Backspace, _) => {
                 if self.open_dialog {
                     let _ = self.dialog_input.title.pop();
-                    self.open_dialog = true;
                 }
             }
             (KeyCode::Enter, _) => {
