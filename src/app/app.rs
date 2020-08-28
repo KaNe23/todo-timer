@@ -1,4 +1,5 @@
-use crate::app::stateful_list::{StatefulList, Direction as ListDirection};
+use crate::app::stateful_list::{Direction as ListDirection, StatefulList};
+use chrono::{DateTime, Local};
 use crossterm::event::{KeyCode, KeyModifiers};
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +22,10 @@ pub struct GroupList<T> {
 pub struct Item {
     pub title: String,
     pub desc: String,
+    pub start_at: Option<DateTime<Local>>,
+    pub end_at: Option<DateTime<Local>>,
+    pub duration: i64,
+    pub paused: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -82,7 +87,7 @@ impl<'a> App {
         frame.render_widget(para, para_box);
     }
 
-    pub fn close_dialog(&mut self){
+    pub fn close_dialog(&mut self) {
         self.open_dialog = false;
         self.dialog_input.title.clear();
         self.dialog_input.desc.clear();
@@ -101,11 +106,11 @@ impl<'a> App {
             (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
                 if let Some(index) = self.active_list {
                     let list = &mut self.group_list.items.get_mut(index).unwrap().list;
-                    if let Some(index) = list.state.selected(){
+                    if let Some(index) = list.state.selected() {
                         list.items.remove(index);
                     }
                 } else {
-                    if let Some(index) = self.group_list.state.selected(){
+                    if let Some(index) = self.group_list.state.selected() {
                         self.group_list.items.remove(index);
                     }
                 }
@@ -132,6 +137,10 @@ impl<'a> App {
                         list.add(Item {
                             title: self.dialog_input.title.clone(),
                             desc: "".to_string(),
+                            start_at: None,
+                            end_at: None,
+                            duration: 0,
+                            paused: false,
                         });
                     } else {
                         self.group_list.add(GroupList {
