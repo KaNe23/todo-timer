@@ -24,7 +24,7 @@ pub struct Item {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct App<'a> {
+pub struct App {
     pub name: String,
     pub group_list: StatefulList<GroupList<Item>>,
     #[serde(skip)]
@@ -32,24 +32,25 @@ pub struct App<'a> {
     #[serde(skip)]
     pub active_list: Option<usize>,
     #[serde(skip)]
-    pub dialog: Option<(Block<'a>, Rect, Paragraph<'a>, Rect)>,
-    #[serde(skip)]
     pub dialog_input: String,
+    #[serde(skip)]
+    pub open_dialog: bool,
 }
 
-impl<'a> App<'a> {
-    pub fn new(name: String, size: Rect) -> App<'a> {
+impl<'a> App {
+    pub fn new(name: String, size: Rect) -> App {
         App {
             curr_size: size,
             name,
             group_list: StatefulList::new(),
             active_list: None,
-            dialog: None,
             dialog_input: "".to_string(),
+            open_dialog: false,
         }
     }
 
-    fn create_dialog(&mut self, size: Rect) -> Option<(Block<'a>, Rect, Paragraph<'a>, Rect)> {
+    fn show_dialog<B: Backend>(&mut self, frame: &mut Frame<B>) {
+        let size = frame.size();
         let dialog_title = if let Some(_) = self.active_list {
             "New Item"
         } else {
@@ -78,18 +79,20 @@ impl<'a> App<'a> {
             horizontal: 1,
         });
         para_box.height = 1;
-        Some((dialog_block, dialog_size, para, para_box))
+        frame.render_widget(dialog_block, dialog_size);
+        frame.render_widget(para, para_box);
     }
 
     pub fn event(&mut self, key: KeyCode, modi: KeyModifiers) {
         match (key, modi) {
             (KeyCode::Esc, _) => {
-                if let Some(_) = self.dialog {
-                    self.dialog = None;
+                if self.open_dialog {
+                    self.open_dialog = false;
+                    self.dialog_input.clear();
                 }
             }
             (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
-                self.dialog = self.create_dialog(self.curr_size);
+                self.open_dialog = true;
             }
             (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
                 if let Some(index) = self.active_list {
@@ -104,25 +107,25 @@ impl<'a> App<'a> {
                 }
             }
             (KeyCode::Char(x), KeyModifiers::NONE) => {
-                if let Some(_) = &self.dialog {
+                if self.open_dialog {
                     self.dialog_input = format!("{}{}", self.dialog_input, x);
-                    self.dialog = self.create_dialog(self.curr_size);
+                    self.open_dialog = true;
                 }
             }
             (KeyCode::Char(x), KeyModifiers::SHIFT) => {
-                if let Some(_) = &self.dialog {
+                if self.open_dialog {
                     self.dialog_input = format!("{}{}", self.dialog_input, x);
-                    self.dialog = self.create_dialog(self.curr_size);
+                    self.open_dialog = true;
                 }
             }
             (KeyCode::Backspace, _) => {
-                if let Some(_) = &self.dialog {
+                if self.open_dialog {
                     let _ = self.dialog_input.pop();
-                    self.dialog = self.create_dialog(self.curr_size);
+                    self.open_dialog = true;
                 }
             }
             (KeyCode::Enter, _) => {
-                if self.dialog.is_some() {
+                if self.open_dialog {
                     if let Some(index) = self.active_list {
                         let list = &mut self.group_list.items.get_mut(index).unwrap().list;
                         list.add(Item {
@@ -136,8 +139,7 @@ impl<'a> App<'a> {
                         });
                     }
 
-                    self.dialog_input = "".to_string();
-                    self.dialog = None;
+                    self.open_dialog = false;
                 }
             }
             (KeyCode::Up, KeyModifiers::CONTROL) => {
@@ -256,9 +258,8 @@ impl<'a> App<'a> {
         frame.render_stateful_widget(list, layout[0], &mut self.group_list.state);
 
         // render dialog
-        if let Some((dialog_block, dialog_size, para, para_box)) = &self.dialog {
-            frame.render_widget((*dialog_block).clone(), *dialog_size);
-            frame.render_widget((*para).clone(), *para_box);
+        if self.open_dialog {
+            self.show_dialog(frame);
         };
     }
 }
