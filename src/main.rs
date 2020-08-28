@@ -20,7 +20,7 @@ use tui::Terminal;
 
 enum Event<I> {
     Input(I),
-    Tick,
+    Tick(Duration),
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -45,7 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
             if last_tick.elapsed() >= tick_rate {
-                tx.send(Event::Tick).unwrap();
+                tx.send(Event::Tick(last_tick.elapsed())).unwrap();
                 last_tick = Instant::now();
             }
         }
@@ -79,6 +79,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     app.event(x, modi);
                 }
             },
+            Event::Tick(duration) => {app.add_time(duration)}
             _ => {}
         };
     }

@@ -1,5 +1,5 @@
 use crate::app::stateful_list::{Direction as ListDirection, StatefulList};
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Duration};
 use crossterm::event::{KeyCode, KeyModifiers};
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +28,24 @@ pub struct Item {
     pub paused: bool,
 }
 
+impl Item {
+    pub fn formatted_duration(&self) -> String {
+        let mut output = String::default();
+        let duration = Duration::milliseconds(self.duration);
+
+        if duration.num_minutes() > 0 {
+            output.push_str(format!("{} h", duration.num_hours()).as_str());
+        }
+
+        if duration.num_minutes() > 0 {
+            output.push_str(format!("{} m", duration.num_minutes()).as_str());
+        }
+
+        output.push_str(format!("{} s", duration.num_seconds()).as_str());
+        output
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct App {
     pub name: String,
@@ -50,6 +68,18 @@ impl<'a> App {
             active_list: None,
             dialog_input: Item::default(),
             open_dialog: false,
+        }
+    }
+
+    pub fn add_time(&mut self, duration: std::time::Duration){
+        for list in &mut self.group_list.items{
+            for item in &mut list.list.items{
+                if item.start_at.is_some() && item.end_at.is_none() && !item.paused {
+                    if let Ok(time) = Duration::from_std(duration){
+                        item.duration = item.duration + time.num_milliseconds();
+                    }
+                }
+            }
         }
     }
 
@@ -324,6 +354,7 @@ impl<'a> App {
                     let mut info = Text::default();
                     info.lines.push(Spans::from(vec![Span::raw(start_at)]));
                     info.lines.push(Spans::from(vec![Span::raw(end_at)]));
+                    info.lines.push(Spans::from(vec![Span::raw(item.formatted_duration())]));
                     info.lines.push(Spans::from(vec![Span::raw(paused)]));
 
                     let para = Paragraph::new(info)
