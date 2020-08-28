@@ -1,5 +1,5 @@
 use crate::app::stateful_list::{Direction as ListDirection, StatefulList};
-use chrono::{DateTime, Local, Duration};
+use chrono::{DateTime, Duration, Local};
 use crossterm::event::{KeyCode, KeyModifiers};
 use serde::{Deserialize, Serialize};
 
@@ -35,21 +35,21 @@ impl Item {
 
         if duration.num_weeks() > 0 {
             output.push_str(format!(" {}w", duration.num_weeks()).as_str());
-            if let Some(dur) = duration.checked_sub(&Duration::weeks(duration.num_weeks())){
+            if let Some(dur) = duration.checked_sub(&Duration::weeks(duration.num_weeks())) {
                 duration = dur;
             }
         }
 
         if duration.num_hours() > 0 {
             output.push_str(format!(" {}h", duration.num_hours()).as_str());
-            if let Some(dur) = duration.checked_sub(&Duration::hours(duration.num_hours())){
+            if let Some(dur) = duration.checked_sub(&Duration::hours(duration.num_hours())) {
                 duration = dur;
             }
         }
 
         if duration.num_minutes() > 0 {
             output.push_str(format!(" {}m", duration.num_minutes()).as_str());
-            if let Some(dur) = duration.checked_sub(&Duration::minutes(duration.num_minutes())){
+            if let Some(dur) = duration.checked_sub(&Duration::minutes(duration.num_minutes())) {
                 duration = dur;
             }
         }
@@ -84,11 +84,11 @@ impl<'a> App {
         }
     }
 
-    pub fn add_time(&mut self, duration: std::time::Duration){
-        for list in &mut self.group_list.items{
-            for item in &mut list.list.items{
+    pub fn add_time(&mut self, duration: std::time::Duration) {
+        for list in &mut self.group_list.items {
+            for item in &mut list.list.items {
                 if item.start_at.is_some() && item.end_at.is_none() && !item.paused {
-                    if let Ok(time) = Duration::from_std(duration){
+                    if let Ok(time) = Duration::from_std(duration) {
                         item.duration = item.duration + time.num_milliseconds();
                     }
                 }
@@ -161,12 +161,12 @@ impl<'a> App {
             }
             (KeyCode::Char('s'), KeyModifiers::ALT) => {
                 if let Some(index) = self.active_list {
-                    if let Some(list) = self.group_list.items.get_mut(index){
-                        if let Some(index) = list.list.state.selected(){
-                            if let Some(item) = list.list.items.get_mut(index){
+                    if let Some(list) = self.group_list.items.get_mut(index) {
+                        if let Some(index) = list.list.state.selected() {
+                            if let Some(item) = list.list.items.get_mut(index) {
                                 if item.start_at.is_some() {
                                     item.start_at = None;
-                                }else{
+                                } else {
                                     item.start_at = Some(Local::now());
                                 }
                             }
@@ -176,12 +176,12 @@ impl<'a> App {
             }
             (KeyCode::Char('d'), KeyModifiers::ALT) => {
                 if let Some(index) = self.active_list {
-                    if let Some(list) = self.group_list.items.get_mut(index){
-                        if let Some(index) = list.list.state.selected(){
-                            if let Some(item) = list.list.items.get_mut(index){
+                    if let Some(list) = self.group_list.items.get_mut(index) {
+                        if let Some(index) = list.list.state.selected() {
+                            if let Some(item) = list.list.items.get_mut(index) {
                                 if item.end_at.is_some() {
                                     item.end_at = None;
-                                }else{
+                                } else {
                                     item.end_at = Some(Local::now());
                                 }
                             }
@@ -191,9 +191,9 @@ impl<'a> App {
             }
             (KeyCode::Char('p'), KeyModifiers::ALT) => {
                 if let Some(index) = self.active_list {
-                    if let Some(list) = self.group_list.items.get_mut(index){
-                        if let Some(index) = list.list.state.selected(){
-                            if let Some(item) = list.list.items.get_mut(index){
+                    if let Some(list) = self.group_list.items.get_mut(index) {
+                        if let Some(index) = list.list.state.selected() {
+                            if let Some(item) = list.list.items.get_mut(index) {
                                 item.paused = !item.paused
                             }
                         }
@@ -293,8 +293,7 @@ impl<'a> App {
             .split(size);
 
         if let Some(index) = self.group_list.state.selected() {
-            if let Some(group_list) = self.group_list.items.get_mut(index){
-            // let group_list = self.group_list.items.get_mut(index).unwrap();
+            if let Some(group_list) = self.group_list.items.get_mut(index) {
                 let list = List::new(
                     group_list
                         .list
@@ -334,8 +333,7 @@ impl<'a> App {
                             .borders(Borders::ALL)
                             .style(Style::default());
 
-
-                        let para_box =  item_list_layout[1].inner(&Margin {
+                        let para_box = item_list_layout[1].inner(&Margin {
                             vertical: 1,
                             horizontal: 1,
                         });
@@ -345,34 +343,31 @@ impl<'a> App {
                             .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
                             .split(para_box);
 
-
                         let para = Paragraph::new(Span::raw(item.desc.clone()))
                             .style(Style::default().fg(Color::White).bg(Color::Black))
                             .alignment(Alignment::Left)
                             .wrap(Wrap { trim: true });
 
-
                         frame.render_widget(para, card_layout[0]);
 
-
-                        let start_at = if let Some(start_at) = item.start_at{
+                        let start_at = if let Some(start_at) = item.start_at {
                             format!("Started: {}", start_at.to_rfc2822())
-                        }else{
+                        } else {
                             "Started: Not started".to_string()
                         };
 
-                        let end_at = if let Some(end_at) = item.end_at{
+                        let end_at = if let Some(end_at) = item.end_at {
                             format!("Ended: {}", end_at.to_rfc2822())
-                        }else{
+                        } else {
                             "Ended: Not done".to_string()
                         };
 
                         let paused = if item.paused {
                             "Paused"
-                        }else{
-                            if item.start_at.is_some() && item.end_at.is_none(){
+                        } else {
+                            if item.start_at.is_some() && item.end_at.is_none() {
                                 "In progress"
-                            }else{
+                            } else {
                                 ""
                             }
                         };
@@ -380,7 +375,8 @@ impl<'a> App {
                         let mut info = Text::default();
                         info.lines.push(Spans::from(vec![Span::raw(start_at)]));
                         info.lines.push(Spans::from(vec![Span::raw(end_at)]));
-                        info.lines.push(Spans::from(vec![Span::raw(item.formatted_duration())]));
+                        info.lines
+                            .push(Spans::from(vec![Span::raw(item.formatted_duration())]));
                         info.lines.push(Spans::from(vec![Span::raw(paused)]));
 
                         let para = Paragraph::new(info)
@@ -390,8 +386,6 @@ impl<'a> App {
 
                         frame.render_widget(para, card_layout[1]);
 
-
-
                         frame.render_widget(dialog_block, item_list_layout[1]);
 
                         frame.render_stateful_widget(
@@ -399,7 +393,7 @@ impl<'a> App {
                             item_list_layout[0],
                             &mut group_list.list.state,
                         );
-                    }else{
+                    } else {
                         frame.render_stateful_widget(list, layout[1], &mut group_list.list.state);
                     }
                 } else {

@@ -79,8 +79,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     app.event(x, modi);
                 }
             },
-            Event::Tick(duration) => {app.add_time(duration)}
-            _ => {}
+            Event::Tick(duration) => app.add_time(duration),
         };
     }
 }
