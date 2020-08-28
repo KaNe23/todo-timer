@@ -30,18 +30,31 @@ pub struct Item {
 
 impl Item {
     pub fn formatted_duration(&self) -> String {
-        let mut output = String::default();
-        let duration = Duration::milliseconds(self.duration);
+        let mut output = "Duration:".to_string();
+        let mut duration = Duration::milliseconds(self.duration);
 
-        if duration.num_minutes() > 0 {
-            output.push_str(format!("{} h", duration.num_hours()).as_str());
+        if duration.num_weeks() > 0 {
+            output.push_str(format!(" {}w", duration.num_weeks()).as_str());
+            if let Some(dur) = duration.checked_sub(&Duration::weeks(duration.num_weeks())){
+                duration = dur;
+            }
+        }
+
+        if duration.num_hours() > 0 {
+            output.push_str(format!(" {}h", duration.num_hours()).as_str());
+            if let Some(dur) = duration.checked_sub(&Duration::hours(duration.num_hours())){
+                duration = dur;
+            }
         }
 
         if duration.num_minutes() > 0 {
-            output.push_str(format!("{} m", duration.num_minutes()).as_str());
+            output.push_str(format!(" {}m", duration.num_minutes()).as_str());
+            if let Some(dur) = duration.checked_sub(&Duration::minutes(duration.num_minutes())){
+                duration = dur;
+            }
         }
 
-        output.push_str(format!("{} s", duration.num_seconds()).as_str());
+        output.push_str(format!(" {}s", duration.num_seconds()).as_str());
         output
     }
 }
