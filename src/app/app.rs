@@ -10,24 +10,30 @@ use tui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
-#[derive(Clone)]
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct GroupList<T> {
     pub name: String,
     pub list: StatefulList<T>,
 }
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Item {
     pub title: String,
     pub desc: String,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct App<'a> {
-    pub curr_size: Rect,
     pub name: String,
     pub group_list: StatefulList<GroupList<Item>>,
+    #[serde(skip)]
+    pub curr_size: Rect,
+    #[serde(skip)]
     pub active_list: Option<usize>,
+    #[serde(skip)]
     pub dialog: Option<(Block<'a>, Rect, Paragraph<'a>, Rect)>,
+    #[serde(skip)]
     pub dialog_input: String,
 }
 
