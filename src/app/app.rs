@@ -17,7 +17,7 @@ pub struct GroupList<T> {
     pub list: StatefulList<T>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Item {
     pub title: String,
     pub desc: String,
@@ -31,8 +31,7 @@ pub struct App {
     pub curr_size: Rect,
     #[serde(skip)]
     pub active_list: Option<usize>,
-    #[serde(skip)]
-    pub dialog_input: String,
+    pub dialog_input: Item,
     #[serde(skip)]
     pub open_dialog: bool,
 }
@@ -44,7 +43,7 @@ impl<'a> App {
             name,
             group_list: StatefulList::new(),
             active_list: None,
-            dialog_input: "".to_string(),
+            dialog_input: Item::default(),
             open_dialog: false,
         }
     }
@@ -69,7 +68,7 @@ impl<'a> App {
             size.height / 3,
         );
 
-        let para = Paragraph::new(Span::raw(self.dialog_input.clone()))
+        let para = Paragraph::new(Span::raw(self.dialog_input.title.clone()))
             .style(Style::default().fg(Color::White).bg(Color::Black))
             .alignment(Alignment::Left)
             .wrap(Wrap { trim: true });
@@ -83,12 +82,17 @@ impl<'a> App {
         frame.render_widget(para, para_box);
     }
 
+    pub fn close_dialog(&mut self){
+        self.open_dialog = false;
+        self.dialog_input.title.clear();
+        self.dialog_input.desc.clear();
+    }
+
     pub fn event(&mut self, key: KeyCode, modi: KeyModifiers) {
         match (key, modi) {
             (KeyCode::Esc, _) => {
                 if self.open_dialog {
-                    self.open_dialog = false;
-                    self.dialog_input.clear();
+                    self.close_dialog();
                 }
             }
             (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
@@ -108,19 +112,19 @@ impl<'a> App {
             }
             (KeyCode::Char(x), KeyModifiers::NONE) => {
                 if self.open_dialog {
-                    self.dialog_input = format!("{}{}", self.dialog_input, x);
+                    self.dialog_input.title = format!("{}{}", self.dialog_input.title, x);
                     self.open_dialog = true;
                 }
             }
             (KeyCode::Char(x), KeyModifiers::SHIFT) => {
                 if self.open_dialog {
-                    self.dialog_input = format!("{}{}", self.dialog_input, x);
+                    self.dialog_input.title = format!("{}{}", self.dialog_input.title, x);
                     self.open_dialog = true;
                 }
             }
             (KeyCode::Backspace, _) => {
                 if self.open_dialog {
-                    let _ = self.dialog_input.pop();
+                    let _ = self.dialog_input.title.pop();
                     self.open_dialog = true;
                 }
             }
@@ -129,17 +133,17 @@ impl<'a> App {
                     if let Some(index) = self.active_list {
                         let list = &mut self.group_list.items.get_mut(index).unwrap().list;
                         list.add(Item {
-                            title: self.dialog_input.clone(),
+                            title: self.dialog_input.title.clone(),
                             desc: "".to_string(),
                         });
                     } else {
                         self.group_list.add(GroupList {
-                            name: self.dialog_input.to_string(),
+                            name: self.dialog_input.title.to_string(),
                             list: StatefulList::new(),
                         });
                     }
 
-                    self.open_dialog = false;
+                    self.close_dialog();
                 }
             }
             (KeyCode::Up, KeyModifiers::CONTROL) => {
