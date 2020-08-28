@@ -188,6 +188,17 @@ impl<'a> App {
                     }
                 }
             }
+            (KeyCode::Char('p'), KeyModifiers::ALT) => {
+                if let Some(index) = self.active_list {
+                    if let Some(list) = self.group_list.items.get_mut(index){
+                        if let Some(index) = list.list.state.selected(){
+                            if let Some(item) = list.list.items.get_mut(index){
+                                item.paused = !item.paused
+                            }
+                        }
+                    }
+                }
+            }
             (KeyCode::Char(x), KeyModifiers::NONE) => {
                 if self.open_dialog {
                     self.dialog_input.title = format!("{}{}", self.dialog_input.title, x);
