@@ -7,7 +7,7 @@ use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
-    text::Span,
+    text::{Span, Spans, Text},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
@@ -236,7 +236,88 @@ impl<'a> App {
                 .highlight_style(Style::default().add_modifier(Modifier::BOLD))
                 .highlight_symbol("> ");
 
-            frame.render_stateful_widget(list, layout[1], &mut group_list.list.state);
+            if let Some(index) = group_list.list.state.selected() {
+                if let Some(item) = group_list.list.items.get(index) {
+                    let item_list_layout = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
+                        .split(layout[1]);
+
+                    let dialog_block = Block::default()
+                        .title(format!(" {} ", item.title.clone()))
+                        .borders(Borders::ALL)
+                        .style(Style::default());
+
+
+                    let para_box =  item_list_layout[1].inner(&Margin {
+                        vertical: 1,
+                        horizontal: 1,
+                    });
+
+                    let card_layout = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
+                        .split(para_box);
+
+
+                    let para = Paragraph::new(Span::raw(item.desc.clone()))
+                        .style(Style::default().fg(Color::White).bg(Color::Black))
+                        .alignment(Alignment::Left)
+                        .wrap(Wrap { trim: true });
+
+
+                    frame.render_widget(para, card_layout[0]);
+
+
+                    let start_at = if let Some(start_at) = item.start_at{
+                        format!("Started: {}", start_at.to_rfc2822())
+                    }else{
+                        "Started: Not started".to_string()
+                    };
+
+                    let end_at = if let Some(end_at) = item.end_at{
+                        format!("Ended: {}", end_at.to_rfc2822())
+                    }else{
+                        "Ended: Not done".to_string()
+                    };
+
+                    let paused = if item.paused {
+                        "Paused"
+                    }else{
+                        if item.start_at.is_some() && item.end_at.is_none(){
+                            "In progress"
+                        }else{
+                            ""
+                        }
+                    };
+
+                    let mut info = Text::default();
+                    info.lines.push(Spans::from(vec![Span::raw(start_at)]));
+                    info.lines.push(Spans::from(vec![Span::raw(end_at)]));
+                    info.lines.push(Spans::from(vec![Span::raw(paused)]));
+
+                    let para = Paragraph::new(info)
+                        .style(Style::default().fg(Color::White).bg(Color::Black))
+                        .alignment(Alignment::Left)
+                        .wrap(Wrap { trim: true });
+
+                    frame.render_widget(para, card_layout[1]);
+
+
+
+                    frame.render_widget(dialog_block, item_list_layout[1]);
+
+                    frame.render_stateful_widget(
+                        list,
+                        item_list_layout[0],
+                        &mut group_list.list.state,
+                    );
+                }else{
+                    frame.render_stateful_widget(list, layout[1], &mut group_list.list.state);
+                }
+            } else {
+                frame.render_stateful_widget(list, layout[1], &mut group_list.list.state);
+            }
         }
 
         let list = List::new(
