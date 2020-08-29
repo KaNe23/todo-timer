@@ -96,6 +96,9 @@ impl Default for Dialog {
 impl<'a> Dialog {
     pub fn process_input(&mut self, key: KeyCode, modi: KeyModifiers) {
         match (key, modi) {
+            (KeyCode::Esc, _) => {
+                self.close_dialog();
+            }
             (KeyCode::Tab, _) => match self.selected_input {
                 Input::Titel => self.selected_input = Input::Desc,
                 Input::Desc => self.selected_input = Input::Titel,
@@ -116,6 +119,12 @@ impl<'a> Dialog {
             }
             _ => {}
         }
+    }
+
+    pub fn close_dialog(&mut self) {
+        self.state = DialogState::Hide;
+        self.input = Item::default();
+        self.selected_input = Input::Titel;
     }
 
     pub fn displayed(&self) -> bool {
@@ -237,144 +246,133 @@ impl<'a> App {
         frame.render_widget(desc, dialog_layout[3]);
     }
 
-    pub fn close_dialog(&mut self) {
-        self.dialog.state = DialogState::Hide;
-        self.dialog.input = Item::default();
-        self.dialog.selected_input = Input::Titel;
-    }
-
     pub fn event(&mut self, key: KeyCode, modi: KeyModifiers) {
-        match (key, modi) {
-            (KeyCode::Esc, _) => {
-                if self.dialog.displayed() {
-                    self.close_dialog();
-                }
-            }
-            (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
-                if !self.dialog.displayed() {
-                    self.dialog.display(DialogState::New);
-                }
-            }
-            (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
-                if !self.dialog.displayed() {
-                    self.dialog.display(DialogState::Edit);
-                }
-            }
-            (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
-                if let Some(index) = self.active_list {
-                    let list = &mut self.group_list.items.get_mut(index).unwrap().list;
-                    if let Some(index) = list.state.selected() {
-                        list.items.remove(index);
-                    }
-                } else {
-                    if let Some(index) = self.group_list.state.selected() {
-                        self.group_list.items.remove(index);
-                        self.group_list.state.select(None);
+        if self.dialog.displayed() && key != KeyCode::Enter{
+            self.dialog.process_input(key, modi);
+        }else{
+            match (key, modi) {
+                (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+                    if !self.dialog.displayed() {
+                        self.dialog.display(DialogState::New);
                     }
                 }
-            }
-            (KeyCode::Char('s'), KeyModifiers::ALT) => {
-                if let Some(index) = self.active_list {
-                    if let Some(list) = self.group_list.items.get_mut(index) {
-                        if let Some(index) = list.list.state.selected() {
-                            if let Some(item) = list.list.items.get_mut(index) {
-                                if item.start_at.is_some() {
-                                    item.start_at = None;
-                                } else {
-                                    item.start_at = Some(Local::now());
-                                }
-                            }
-                        }
+                (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
+                    if !self.dialog.displayed() {
+                        self.dialog.display(DialogState::Edit);
                     }
                 }
-            }
-            (KeyCode::Char('d'), KeyModifiers::ALT) => {
-                if let Some(index) = self.active_list {
-                    if let Some(list) = self.group_list.items.get_mut(index) {
-                        if let Some(index) = list.list.state.selected() {
-                            if let Some(item) = list.list.items.get_mut(index) {
-                                if item.end_at.is_some() {
-                                    item.end_at = None;
-                                } else {
-                                    item.end_at = Some(Local::now());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            (KeyCode::Char('p'), KeyModifiers::ALT) => {
-                if let Some(index) = self.active_list {
-                    if let Some(list) = self.group_list.items.get_mut(index) {
-                        if let Some(index) = list.list.state.selected() {
-                            if let Some(item) = list.list.items.get_mut(index) {
-                                item.paused = !item.paused
-                            }
-                        }
-                    }
-                }
-            }
-            (KeyCode::Enter, _) => {
-                if self.dialog.displayed(){
-                    //TODO: replace item on edit
+                (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
                     if let Some(index) = self.active_list {
                         let list = &mut self.group_list.items.get_mut(index).unwrap().list;
-                        list.add(self.dialog.input.clone());
+                        if let Some(index) = list.state.selected() {
+                            list.items.remove(index);
+                        }
                     } else {
-                        self.group_list.add(GroupList {
-                            name: self.dialog.input.title.to_string(),
-                            list: StatefulList::new(),
-                        });
+                        if let Some(index) = self.group_list.state.selected() {
+                            self.group_list.items.remove(index);
+                            self.group_list.state.select(None);
+                        }
                     }
                 }
-                self.close_dialog();
-            }
-            (KeyCode::Up, KeyModifiers::CONTROL) => {
-                if let Some(index) = self.active_list {
-                    let list = &mut self.group_list.items.get_mut(index).unwrap().list;
-                    list.move_selected_item(ListDirection::Down);
-                } else {
-                    self.group_list.move_selected_item(ListDirection::Down);
+                (KeyCode::Char('s'), KeyModifiers::ALT) => {
+                    if let Some(index) = self.active_list {
+                        if let Some(list) = self.group_list.items.get_mut(index) {
+                            if let Some(index) = list.list.state.selected() {
+                                if let Some(item) = list.list.items.get_mut(index) {
+                                    if item.start_at.is_some() {
+                                        item.start_at = None;
+                                    } else {
+                                        item.start_at = Some(Local::now());
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            (KeyCode::Down, KeyModifiers::CONTROL) => {
-                if let Some(index) = self.active_list {
-                    let list = &mut self.group_list.items.get_mut(index).unwrap().list;
-                    list.move_selected_item(ListDirection::Up);
-                } else {
-                    self.group_list.move_selected_item(ListDirection::Up);
+                (KeyCode::Char('d'), KeyModifiers::ALT) => {
+                    if let Some(index) = self.active_list {
+                        if let Some(list) = self.group_list.items.get_mut(index) {
+                            if let Some(index) = list.list.state.selected() {
+                                if let Some(item) = list.list.items.get_mut(index) {
+                                    if item.end_at.is_some() {
+                                        item.end_at = None;
+                                    } else {
+                                        item.end_at = Some(Local::now());
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            (KeyCode::Up, _) => {
-                if let Some(pos) = self.active_list {
-                    self.group_list.items[pos].list.previous();
-                } else {
-                    self.group_list.previous();
+                (KeyCode::Char('p'), KeyModifiers::ALT) => {
+                    if let Some(index) = self.active_list {
+                        if let Some(list) = self.group_list.items.get_mut(index) {
+                            if let Some(index) = list.list.state.selected() {
+                                if let Some(item) = list.list.items.get_mut(index) {
+                                    item.paused = !item.paused
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            (KeyCode::Down, _) => {
-                if let Some(pos) = self.active_list {
-                    self.group_list.items[pos].list.next();
-                } else {
-                    self.group_list.next();
+                (KeyCode::Enter, _) => {
+                    if self.dialog.displayed(){
+                        //TODO: replace item on edit
+                        if let Some(index) = self.active_list {
+                            let list = &mut self.group_list.items.get_mut(index).unwrap().list;
+                            list.add(self.dialog.input.clone());
+                        } else {
+                            self.group_list.add(GroupList {
+                                name: self.dialog.input.title.to_string(),
+                                list: StatefulList::new(),
+                            });
+                        }
+                    }
+                    self.dialog.close_dialog();
                 }
-            }
-            (KeyCode::Right, _) => {
-                if self.active_list.is_none() {
-                    self.active_list = self.group_list.state.selected();
+                (KeyCode::Up, KeyModifiers::CONTROL) => {
+                    if let Some(index) = self.active_list {
+                        let list = &mut self.group_list.items.get_mut(index).unwrap().list;
+                        list.move_selected_item(ListDirection::Down);
+                    } else {
+                        self.group_list.move_selected_item(ListDirection::Down);
+                    }
                 }
-            }
-            (KeyCode::Left, _) => {
-                if let Some(index) = self.active_list {
-                    let list = self.group_list.items.get_mut(index).unwrap();
-                    list.list.state.select(None);
-                    self.active_list = None;
+                (KeyCode::Down, KeyModifiers::CONTROL) => {
+                    if let Some(index) = self.active_list {
+                        let list = &mut self.group_list.items.get_mut(index).unwrap().list;
+                        list.move_selected_item(ListDirection::Up);
+                    } else {
+                        self.group_list.move_selected_item(ListDirection::Up);
+                    }
                 }
-            }
-            (key, modi) => {
-                if self.dialog.displayed() {
-                    self.dialog.process_input(key, modi);
+                (KeyCode::Up, _) => {
+                    if let Some(pos) = self.active_list {
+                        self.group_list.items[pos].list.previous();
+                    } else {
+                        self.group_list.previous();
+                    }
                 }
+                (KeyCode::Down, _) => {
+                    if let Some(pos) = self.active_list {
+                        self.group_list.items[pos].list.next();
+                    } else {
+                        self.group_list.next();
+                    }
+                }
+                (KeyCode::Right, _) => {
+                    if self.active_list.is_none() {
+                        self.active_list = self.group_list.state.selected();
+                    }
+                }
+                (KeyCode::Left, _) => {
+                    if let Some(index) = self.active_list {
+                        let list = self.group_list.items.get_mut(index).unwrap();
+                        list.list.state.select(None);
+                        self.active_list = None;
+                    }
+                }
+                _ => {}
             }
         }
     }
