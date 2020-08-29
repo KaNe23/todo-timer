@@ -306,6 +306,8 @@ impl<'a> App {
                     if let Some(item) = self.get_selected_item() {
                         if item.start_at.is_some() {
                             item.start_at = None;
+                            item.end_at = None;
+                            item.duration = 0;
                         } else {
                             item.start_at = Some(Local::now());
                         }
