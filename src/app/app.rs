@@ -8,7 +8,7 @@ use tui::{
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap, Clear},
     Frame,
 };
 
@@ -59,6 +59,17 @@ impl Item {
     }
 }
 
+pub enum Input{
+    Titel,
+    Desc,
+}
+
+impl Default for Input{
+    fn default() -> Self{
+        Input::Titel
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct App {
     pub name: String,
@@ -70,6 +81,8 @@ pub struct App {
     pub dialog_input: Item,
     #[serde(skip)]
     pub open_dialog: bool,
+    #[serde(skip)]
+    pub selected_input: Input,
 }
 
 impl<'a> App {
@@ -81,6 +94,7 @@ impl<'a> App {
             active_list: None,
             dialog_input: Item::default(),
             open_dialog: false,
+            selected_input: Input::Titel,
         }
     }
 
@@ -99,15 +113,15 @@ impl<'a> App {
     fn show_dialog<B: Backend>(&mut self, frame: &mut Frame<B>) {
         let size = frame.size();
         let dialog_title = if let Some(_) = self.active_list {
-            "New Item"
+            " New Item "
         } else {
-            "New List"
+            " New List "
         };
 
         let dialog_block = Block::default()
             .title(dialog_title)
             .borders(Borders::ALL)
-            .style(Style::default().bg(Color::LightBlue));
+            .style(Style::default().bg(Color::Blue));
 
         let dialog_size = Rect::new(
             size.x + size.width / 3,
@@ -116,24 +130,48 @@ impl<'a> App {
             size.height / 3,
         );
 
-        let para = Paragraph::new(Span::raw(self.dialog_input.title.clone()))
-            .style(Style::default().fg(Color::White).bg(Color::Black))
+        let (titel_input_style, desc_input_style) = match self.selected_input{
+            Input::Titel => {(Style::default().fg(Color::Black).bg(Color::LightCyan), Style::default().fg(Color::White).bg(Color::Black))}
+            Input::Desc => {(Style::default().fg(Color::White).bg(Color::Black), Style::default().fg(Color::Black).bg(Color::LightCyan))}
+        };
+
+        let dialog_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Ratio(1, 1)])
+            .split(dialog_size.inner(&Margin{vertical: 1, horizontal: 1}));
+
+        let title_label = Paragraph::new(Text::from("Title"))
+            .style(Style::default().fg(Color::White).bg(Color::Blue))
             .alignment(Alignment::Left)
             .wrap(Wrap { trim: true });
 
-        let mut para_box = dialog_size.inner(&Margin {
-            vertical: 1,
-            horizontal: 1,
-        });
-        para_box.height = 1;
+        let title = Paragraph::new(Span::raw(self.dialog_input.title.clone()))
+            .style(titel_input_style)
+            .alignment(Alignment::Left)
+            .wrap(Wrap { trim: true });
+
+        let desc_label = Paragraph::new(Text::from("Description"))
+            .style(Style::default().fg(Color::White).bg(Color::Blue))
+            .alignment(Alignment::Left)
+            .wrap(Wrap { trim: true });
+
+        let desc = Paragraph::new(Span::raw(self.dialog_input.desc.clone()))
+            .style(desc_input_style)
+            .alignment(Alignment::Left)
+            .wrap(Wrap { trim: true });
+
+        frame.render_widget(Clear, dialog_size);
         frame.render_widget(dialog_block, dialog_size);
-        frame.render_widget(para, para_box);
+        frame.render_widget(title_label, dialog_layout[0]);
+        frame.render_widget(title, dialog_layout[1]);
+        frame.render_widget(desc_label, dialog_layout[2]);
+        frame.render_widget(desc, dialog_layout[3]);
     }
 
     pub fn close_dialog(&mut self) {
         self.open_dialog = false;
-        self.dialog_input.title.clear();
-        self.dialog_input.desc.clear();
+        self.dialog_input = Item::default();
+        self.selected_input = Input::Titel;
     }
 
     pub fn event(&mut self, key: KeyCode, modi: KeyModifiers) {
@@ -200,33 +238,44 @@ impl<'a> App {
                     }
                 }
             }
+            (KeyCode::Tab, _) => {
+                if self.open_dialog {
+                    match self.selected_input{
+                        Input::Titel => {self.selected_input = Input::Desc}
+                        Input::Desc => {self.selected_input = Input::Titel}
+
+                    }
+                }
+            }
             (KeyCode::Char(x), KeyModifiers::NONE) => {
                 if self.open_dialog {
-                    self.dialog_input.title = format!("{}{}", self.dialog_input.title, x);
+                    match self.selected_input{
+                        Input::Titel => {self.dialog_input.title = format!("{}{}", self.dialog_input.title, x)}
+                        Input::Desc => {self.dialog_input.desc = format!("{}{}", self.dialog_input.desc, x)}
+                    }
                 }
             }
             (KeyCode::Char(x), KeyModifiers::SHIFT) => {
                 if self.open_dialog {
-                    self.dialog_input.title = format!("{}{}", self.dialog_input.title, x);
+                    match self.selected_input{
+                        Input::Titel => {self.dialog_input.title = format!("{}{}", self.dialog_input.title, x)}
+                        Input::Desc => {self.dialog_input.desc = format!("{}{}", self.dialog_input.desc, x)}
+                    }
                 }
             }
             (KeyCode::Backspace, _) => {
                 if self.open_dialog {
-                    let _ = self.dialog_input.title.pop();
+                    match self.selected_input{
+                        Input::Titel => {self.dialog_input.title.pop()}
+                        Input::Desc => {self.dialog_input.desc.pop()}
+                    };
                 }
             }
             (KeyCode::Enter, _) => {
                 if self.open_dialog {
                     if let Some(index) = self.active_list {
                         let list = &mut self.group_list.items.get_mut(index).unwrap().list;
-                        list.add(Item {
-                            title: self.dialog_input.title.clone(),
-                            desc: "".to_string(),
-                            start_at: None,
-                            end_at: None,
-                            duration: 0,
-                            paused: false,
-                        });
+                        list.add(self.dialog_input.clone());
                     } else {
                         self.group_list.add(GroupList {
                             name: self.dialog_input.title.to_string(),
@@ -331,7 +380,7 @@ impl<'a> App {
                         let dialog_block = Block::default()
                             .title(format!(" {} ", item.title.clone()))
                             .borders(Borders::ALL)
-                            .style(Style::default());
+                            .style(Style::default().bg(Color::Black));
 
                         let para_box = item_list_layout[1].inner(&Margin {
                             vertical: 1,
@@ -340,7 +389,7 @@ impl<'a> App {
 
                         let card_layout = Layout::default()
                             .direction(Direction::Vertical)
-                            .constraints([Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)])
+                            .constraints([Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)])
                             .split(para_box);
 
                         let para = Paragraph::new(Span::raw(item.desc.clone()))
