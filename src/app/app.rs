@@ -8,7 +8,7 @@ use tui::{
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap, Clear},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
     Frame,
 };
 
@@ -59,14 +59,74 @@ impl Item {
     }
 }
 
-pub enum Input{
+#[derive(Clone)]
+pub enum Input {
     Titel,
     Desc,
 }
 
-impl Default for Input{
-    fn default() -> Self{
+impl Default for Input {
+    fn default() -> Self {
         Input::Titel
+    }
+}
+#[derive(Clone)]
+pub enum DialogState {
+    New,
+    Edit,
+    Hide,
+}
+#[derive(Clone)]
+pub struct Dialog {
+    pub input: Item,
+    pub selected_input: Input,
+    pub state: DialogState,
+}
+
+impl Default for Dialog {
+    fn default() -> Self {
+        Dialog {
+            input: Item::default(),
+            selected_input: Input::Titel,
+            state: DialogState::Hide,
+        }
+    }
+}
+
+impl<'a> Dialog {
+    pub fn process_input(&mut self, key: KeyCode, modi: KeyModifiers) {
+        match (key, modi) {
+            (KeyCode::Tab, _) => match self.selected_input {
+                Input::Titel => self.selected_input = Input::Desc,
+                Input::Desc => self.selected_input = Input::Titel,
+            },
+            (KeyCode::Char(x), _) => match self.selected_input {
+                Input::Titel => self.input.title.push(x),
+                Input::Desc => self.input.desc.push(x),
+            },
+            (KeyCode::Backspace, _) => {
+                match self.selected_input {
+                    Input::Titel => {
+                        self.input.title.pop();
+                    }
+                    Input::Desc => {
+                        self.input.desc.pop();
+                    }
+                };
+            }
+            _ => {}
+        }
+    }
+
+    pub fn displayed(&self) -> bool {
+        match self.state {
+            DialogState::Hide => false,
+            _ => true,
+        }
+    }
+
+    pub fn display(&mut self, state: DialogState) {
+        self.state = state;
     }
 }
 
@@ -78,11 +138,8 @@ pub struct App {
     pub curr_size: Rect,
     #[serde(skip)]
     pub active_list: Option<usize>,
-    pub dialog_input: Item,
     #[serde(skip)]
-    pub open_dialog: bool,
-    #[serde(skip)]
-    pub selected_input: Input,
+    pub dialog: Dialog,
 }
 
 impl<'a> App {
@@ -92,9 +149,7 @@ impl<'a> App {
             name,
             group_list: StatefulList::new(),
             active_list: None,
-            dialog_input: Item::default(),
-            open_dialog: false,
-            selected_input: Input::Titel,
+            dialog: Dialog::default(),
         }
     }
 
@@ -130,22 +185,36 @@ impl<'a> App {
             size.height / 3,
         );
 
-        let (titel_input_style, desc_input_style) = match self.selected_input{
-            Input::Titel => {(Style::default().fg(Color::Black).bg(Color::LightCyan), Style::default().fg(Color::White).bg(Color::Black))}
-            Input::Desc => {(Style::default().fg(Color::White).bg(Color::Black), Style::default().fg(Color::Black).bg(Color::LightCyan))}
+        let (titel_input_style, desc_input_style) = match self.dialog.selected_input {
+            Input::Titel => (
+                Style::default().fg(Color::Black).bg(Color::LightCyan),
+                Style::default().fg(Color::White).bg(Color::Black),
+            ),
+            Input::Desc => (
+                Style::default().fg(Color::White).bg(Color::Black),
+                Style::default().fg(Color::Black).bg(Color::LightCyan),
+            ),
         };
 
         let dialog_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Length(1), Constraint::Ratio(1, 1)])
-            .split(dialog_size.inner(&Margin{vertical: 1, horizontal: 1}));
+            .constraints([
+                Constraint::Length(1),
+                Constraint::Length(1),
+                Constraint::Length(1),
+                Constraint::Ratio(1, 1),
+            ])
+            .split(dialog_size.inner(&Margin {
+                vertical: 1,
+                horizontal: 1,
+            }));
 
         let title_label = Paragraph::new(Text::from("Title"))
             .style(Style::default().fg(Color::White).bg(Color::Blue))
             .alignment(Alignment::Left)
             .wrap(Wrap { trim: true });
 
-        let title = Paragraph::new(Span::raw(self.dialog_input.title.clone()))
+        let title = Paragraph::new(Span::raw(self.dialog.input.title.clone()))
             .style(titel_input_style)
             .alignment(Alignment::Left)
             .wrap(Wrap { trim: true });
@@ -155,7 +224,7 @@ impl<'a> App {
             .alignment(Alignment::Left)
             .wrap(Wrap { trim: true });
 
-        let desc = Paragraph::new(Span::raw(self.dialog_input.desc.clone()))
+        let desc = Paragraph::new(Span::raw(self.dialog.input.desc.clone()))
             .style(desc_input_style)
             .alignment(Alignment::Left)
             .wrap(Wrap { trim: true });
@@ -169,20 +238,27 @@ impl<'a> App {
     }
 
     pub fn close_dialog(&mut self) {
-        self.open_dialog = false;
-        self.dialog_input = Item::default();
-        self.selected_input = Input::Titel;
+        self.dialog.state = DialogState::Hide;
+        self.dialog.input = Item::default();
+        self.dialog.selected_input = Input::Titel;
     }
 
     pub fn event(&mut self, key: KeyCode, modi: KeyModifiers) {
         match (key, modi) {
             (KeyCode::Esc, _) => {
-                if self.open_dialog {
+                if self.dialog.displayed() {
                     self.close_dialog();
                 }
             }
             (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
-                self.open_dialog = true;
+                if !self.dialog.displayed() {
+                    self.dialog.display(DialogState::New);
+                }
+            }
+            (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
+                if !self.dialog.displayed() {
+                    self.dialog.display(DialogState::Edit);
+                }
             }
             (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
                 if let Some(index) = self.active_list {
@@ -238,53 +314,20 @@ impl<'a> App {
                     }
                 }
             }
-            (KeyCode::Tab, _) => {
-                if self.open_dialog {
-                    match self.selected_input{
-                        Input::Titel => {self.selected_input = Input::Desc}
-                        Input::Desc => {self.selected_input = Input::Titel}
-
-                    }
-                }
-            }
-            (KeyCode::Char(x), KeyModifiers::NONE) => {
-                if self.open_dialog {
-                    match self.selected_input{
-                        Input::Titel => {self.dialog_input.title = format!("{}{}", self.dialog_input.title, x)}
-                        Input::Desc => {self.dialog_input.desc = format!("{}{}", self.dialog_input.desc, x)}
-                    }
-                }
-            }
-            (KeyCode::Char(x), KeyModifiers::SHIFT) => {
-                if self.open_dialog {
-                    match self.selected_input{
-                        Input::Titel => {self.dialog_input.title = format!("{}{}", self.dialog_input.title, x)}
-                        Input::Desc => {self.dialog_input.desc = format!("{}{}", self.dialog_input.desc, x)}
-                    }
-                }
-            }
-            (KeyCode::Backspace, _) => {
-                if self.open_dialog {
-                    match self.selected_input{
-                        Input::Titel => {self.dialog_input.title.pop()}
-                        Input::Desc => {self.dialog_input.desc.pop()}
-                    };
-                }
-            }
             (KeyCode::Enter, _) => {
-                if self.open_dialog {
+                if self.dialog.displayed(){
+                    //TODO: replace item on edit
                     if let Some(index) = self.active_list {
                         let list = &mut self.group_list.items.get_mut(index).unwrap().list;
-                        list.add(self.dialog_input.clone());
+                        list.add(self.dialog.input.clone());
                     } else {
                         self.group_list.add(GroupList {
-                            name: self.dialog_input.title.to_string(),
+                            name: self.dialog.input.title.to_string(),
                             list: StatefulList::new(),
                         });
                     }
-
-                    self.close_dialog();
                 }
+                self.close_dialog();
             }
             (KeyCode::Up, KeyModifiers::CONTROL) => {
                 if let Some(index) = self.active_list {
@@ -328,7 +371,11 @@ impl<'a> App {
                     self.active_list = None;
                 }
             }
-            _ => {}
+            (key, modi) => {
+                if self.dialog.displayed() {
+                    self.dialog.process_input(key, modi);
+                }
+            }
         }
     }
 
@@ -478,10 +525,8 @@ impl<'a> App {
             .highlight_symbol("> ");
 
         frame.render_stateful_widget(list, layout[0], &mut self.group_list.state);
-
-        // render dialog
-        if self.open_dialog {
+        if self.dialog.displayed() {
             self.show_dialog(frame);
-        };
+        }
     }
 }
