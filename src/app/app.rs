@@ -174,6 +174,34 @@ impl<'a> App {
         }
     }
 
+    fn selected_item(&self) -> Option<(usize, usize)>{
+        if let Some(list_index) = self.active_list {
+            if let Some(list) = self.group_list.items.get(list_index) {
+                if let Some(index) = list.list.state.selected() {
+                    if list.list.items.get(index).is_some() {
+                        return Some((list_index, index))
+                    }
+                }
+            }
+        }
+        return None
+    }
+
+    fn get_item(&mut self, list_index: usize, index: usize) -> Option<&mut Item>{
+        if let Some(list) = self.group_list.items.get_mut(list_index) {
+            return list.list.items.get_mut(index)
+        }
+        return None
+    }
+
+    fn get_selected_item(&mut self) -> Option<&mut Item> {
+        if let Some((list_index, index)) = self.selected_item(){
+            return self.get_item(list_index, index)
+        }else{
+            return None
+        }
+    }
+
     fn show_dialog<B: Backend>(&mut self, frame: &mut Frame<B>) {
         let size = frame.size();
         let dialog_title = if let Some(_) = self.active_list {
@@ -275,44 +303,26 @@ impl<'a> App {
                     }
                 }
                 (KeyCode::Char('s'), KeyModifiers::ALT) => {
-                    if let Some(index) = self.active_list {
-                        if let Some(list) = self.group_list.items.get_mut(index) {
-                            if let Some(index) = list.list.state.selected() {
-                                if let Some(item) = list.list.items.get_mut(index) {
-                                    if item.start_at.is_some() {
-                                        item.start_at = None;
-                                    } else {
-                                        item.start_at = Some(Local::now());
-                                    }
-                                }
-                            }
+                    if let Some(item) = self.get_selected_item() {
+                        if item.start_at.is_some() {
+                            item.start_at = None;
+                        } else {
+                            item.start_at = Some(Local::now());
                         }
                     }
                 }
                 (KeyCode::Char('d'), KeyModifiers::ALT) => {
-                    if let Some(index) = self.active_list {
-                        if let Some(list) = self.group_list.items.get_mut(index) {
-                            if let Some(index) = list.list.state.selected() {
-                                if let Some(item) = list.list.items.get_mut(index) {
-                                    if item.end_at.is_some() {
-                                        item.end_at = None;
-                                    } else {
-                                        item.end_at = Some(Local::now());
-                                    }
-                                }
-                            }
+                    if let Some(item) = self.get_selected_item() {
+                        if item.end_at.is_some() {
+                            item.end_at = None;
+                        } else {
+                            item.end_at = Some(Local::now());
                         }
                     }
                 }
                 (KeyCode::Char('p'), KeyModifiers::ALT) => {
-                    if let Some(index) = self.active_list {
-                        if let Some(list) = self.group_list.items.get_mut(index) {
-                            if let Some(index) = list.list.state.selected() {
-                                if let Some(item) = list.list.items.get_mut(index) {
-                                    item.paused = !item.paused
-                                }
-                            }
-                        }
+                    if let Some(item) = self.get_selected_item() {
+                        item.paused = !item.paused
                     }
                 }
                 (KeyCode::Enter, _) => {
