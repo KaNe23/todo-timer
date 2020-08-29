@@ -137,6 +137,13 @@ impl<'a> Dialog {
     pub fn display(&mut self, state: DialogState) {
         self.state = state;
     }
+
+    pub fn editing(&self) -> bool{
+        match self.state{
+            DialogState::Edit => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -286,7 +293,10 @@ impl<'a> App {
                 }
                 (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
                     if !self.dialog.displayed() {
-                        self.dialog.display(DialogState::Edit);
+                        if let Some(item) = self.get_selected_item(){
+                            self.dialog.input = item.clone();
+                            self.dialog.display(DialogState::Edit);
+                        }
                     }
                 }
                 (KeyCode::Char('d'), KeyModifiers::CONTROL) => {
@@ -329,8 +339,14 @@ impl<'a> App {
                 }
                 (KeyCode::Enter, _) => {
                     if self.dialog.displayed(){
-                        //TODO: replace item on edit
-                        if let Some(index) = self.active_list {
+                        if self.dialog.editing(){
+                            let title = self.dialog.input.title.clone();
+                            let desc = self.dialog.input.desc.clone();
+                            if let Some(item) = self.get_selected_item(){
+                                item.title = title;
+                                item.desc = desc;
+                            }
+                        }else if let Some(index) = self.active_list {
                             let list = &mut self.group_list.items.get_mut(index).unwrap().list;
                             list.add(self.dialog.input.clone());
                         } else {
