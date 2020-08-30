@@ -153,17 +153,14 @@ pub struct App {
     pub name: String,
     pub group_list: StatefulList<GroupList<Item>>,
     #[serde(skip)]
-    pub curr_size: Rect,
-    #[serde(skip)]
     pub active_list: Option<usize>,
     #[serde(skip)]
     pub dialog: Dialog,
 }
 
 impl<'a> App {
-    pub fn new(name: String, size: Rect) -> App {
+    pub fn new(name: String) -> App {
         App {
-            curr_size: size,
             name,
             group_list: StatefulList::new(),
             active_list: None,
@@ -411,7 +408,6 @@ impl<'a> App {
 
     pub fn draw<B: Backend>(&mut self, frame: &mut Frame<B>) {
         let size = frame.size();
-        self.curr_size = size;
 
         let layout = Layout::default()
             .direction(Direction::Horizontal)

@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut app: App = match fs::read_to_string("db.toml") {
         Ok(db) => toml::from_str(&db).unwrap(),
-        Err(_) => App::new("Todo-Timer".to_string(), terminal.get_frame().size()),
+        Err(_) => App::new("Todo-Timer".to_string()),
     };
 
     terminal.clear()?;
