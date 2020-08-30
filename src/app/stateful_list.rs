@@ -21,13 +21,6 @@ impl<T> StatefulList<T> {
         }
     }
 
-    pub fn with_items(items: Vec<T>) -> StatefulList<T> {
-        StatefulList {
-            state: ListState::default(),
-            items,
-        }
-    }
-
     pub fn move_selected_item(&mut self, direction: Direction) {
         if let Some(index) = self.state.selected() {
             match direction {
@@ -87,10 +80,6 @@ impl<T> StatefulList<T> {
             None => 0,
         };
         self.state.select(Some(i));
-    }
-
-    pub fn unselect(&mut self) {
-        self.state.select(None);
     }
 
     pub fn add(&mut self, item: T) {

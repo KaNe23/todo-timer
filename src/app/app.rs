@@ -57,6 +57,14 @@ impl Item {
         output.push_str(format!(" {}s", duration.num_seconds()).as_str());
         output
     }
+
+    fn started(&self) -> bool {
+        return self.start_at.is_some();
+    }
+
+    fn done(&self) -> bool {
+        return self.end_at.is_some();
+    }
 }
 
 #[derive(Clone)]
@@ -138,8 +146,8 @@ impl<'a> Dialog {
         self.state = state;
     }
 
-    pub fn editing(&self) -> bool{
-        match self.state{
+    pub fn editing(&self) -> bool {
+        match self.state {
             DialogState::Edit => true,
             _ => false,
         }
@@ -181,31 +189,31 @@ impl<'a> App {
         }
     }
 
-    fn selected_item(&self) -> Option<(usize, usize)>{
+    fn selected_item(&self) -> Option<(usize, usize)> {
         if let Some(list_index) = self.active_list {
             if let Some(list) = self.group_list.items.get(list_index) {
                 if let Some(index) = list.list.state.selected() {
                     if list.list.items.get(index).is_some() {
-                        return Some((list_index, index))
+                        return Some((list_index, index));
                     }
                 }
             }
         }
-        return None
+        return None;
     }
 
-    fn get_item(&mut self, list_index: usize, index: usize) -> Option<&mut Item>{
+    fn get_item(&mut self, list_index: usize, index: usize) -> Option<&mut Item> {
         if let Some(list) = self.group_list.items.get_mut(list_index) {
-            return list.list.items.get_mut(index)
+            return list.list.items.get_mut(index);
         }
-        return None
+        return None;
     }
 
     fn get_selected_item(&mut self) -> Option<&mut Item> {
-        if let Some((list_index, index)) = self.selected_item(){
-            return self.get_item(list_index, index)
-        }else{
-            return None
+        if let Some((list_index, index)) = self.selected_item() {
+            return self.get_item(list_index, index);
+        } else {
+            return None;
         }
     }
 
@@ -282,9 +290,9 @@ impl<'a> App {
     }
 
     pub fn event(&mut self, key: KeyCode, modi: KeyModifiers) {
-        if self.dialog.displayed() && key != KeyCode::Enter{
+        if self.dialog.displayed() && key != KeyCode::Enter {
             self.dialog.process_input(key, modi);
-        }else{
+        } else {
             match (key, modi) {
                 (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
                     if !self.dialog.displayed() {
@@ -293,7 +301,7 @@ impl<'a> App {
                 }
                 (KeyCode::Char('e'), KeyModifiers::CONTROL) => {
                     if !self.dialog.displayed() {
-                        if let Some(item) = self.get_selected_item(){
+                        if let Some(item) = self.get_selected_item() {
                             self.dialog.input = item.clone();
                             self.dialog.display(DialogState::Edit);
                         }
@@ -338,15 +346,15 @@ impl<'a> App {
                     }
                 }
                 (KeyCode::Enter, _) => {
-                    if self.dialog.displayed(){
-                        if self.dialog.editing(){
+                    if self.dialog.displayed() {
+                        if self.dialog.editing() {
                             let title = self.dialog.input.title.clone();
                             let desc = self.dialog.input.desc.clone();
-                            if let Some(item) = self.get_selected_item(){
+                            if let Some(item) = self.get_selected_item() {
                                 item.title = title;
                                 item.desc = desc;
                             }
-                        }else if let Some(index) = self.active_list {
+                        } else if let Some(index) = self.active_list {
                             let list = &mut self.group_list.items.get_mut(index).unwrap().list;
                             list.add(self.dialog.input.clone());
                         } else {
@@ -422,7 +430,19 @@ impl<'a> App {
                         .items
                         .clone()
                         .into_iter()
-                        .map(|gl| ListItem::new(Span::raw(gl.title)))
+                        .map(|item| {
+                            let style = if item.done() {
+                                Style::default().fg(Color::Green)
+                            } else if item.paused {
+                                Style::default().fg(Color::Blue)
+                            } else if item.started() {
+                                Style::default().fg(Color::Yellow)
+                            } else {
+                                Style::default().fg(Color::White)
+                            };
+
+                            ListItem::new(Span::styled(item.title, style))
+                        })
                         .collect::<Vec<_>>(),
                 );
 
