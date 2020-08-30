@@ -266,22 +266,25 @@ impl<'a> App {
             .alignment(Alignment::Left)
             .wrap(Wrap { trim: true });
 
-        let desc_label = Paragraph::new(Text::from("Description"))
-            .style(Style::default().fg(Color::White).bg(Color::Blue))
-            .alignment(Alignment::Left)
-            .wrap(Wrap { trim: true });
-
-        let desc = Paragraph::new(Span::raw(self.dialog.input.desc.clone()))
-            .style(desc_input_style)
-            .alignment(Alignment::Left)
-            .wrap(Wrap { trim: true });
-
         frame.render_widget(Clear, dialog_size);
         frame.render_widget(dialog_block, dialog_size);
         frame.render_widget(title_label, dialog_layout[0]);
         frame.render_widget(title, dialog_layout[1]);
-        frame.render_widget(desc_label, dialog_layout[2]);
-        frame.render_widget(desc, dialog_layout[3]);
+
+        if self.active_list.is_some(){
+            let desc_label = Paragraph::new(Text::from("Description"))
+                .style(Style::default().fg(Color::White).bg(Color::Blue))
+                .alignment(Alignment::Left)
+                .wrap(Wrap { trim: true });
+
+            let desc = Paragraph::new(Span::raw(self.dialog.input.desc.clone()))
+                .style(desc_input_style)
+                .alignment(Alignment::Left)
+                .wrap(Wrap { trim: true });
+
+            frame.render_widget(desc_label, dialog_layout[2]);
+            frame.render_widget(desc, dialog_layout[3]);
+        }
     }
 
     pub fn event(&mut self, key: KeyCode, modi: KeyModifiers) {
