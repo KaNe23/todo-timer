@@ -59,11 +59,11 @@ impl Item {
     }
 
     fn started(&self) -> bool {
-        return self.start_at.is_some();
+        self.start_at.is_some()
     }
 
     fn done(&self) -> bool {
-        return self.end_at.is_some();
+        self.end_at.is_some()
     }
 }
 
@@ -136,10 +136,7 @@ impl<'a> Dialog {
     }
 
     pub fn displayed(&self) -> bool {
-        match self.state {
-            DialogState::Hide => false,
-            _ => true,
-        }
+        !matches!(self.state, DialogState::Hide)
     }
 
     pub fn display(&mut self, state: DialogState) {
@@ -147,10 +144,7 @@ impl<'a> Dialog {
     }
 
     pub fn editing(&self) -> bool {
-        match self.state {
-            DialogState::Edit => true,
-            _ => false,
-        }
+        matches!(self.state, DialogState::Edit)
     }
 }
 
@@ -182,7 +176,7 @@ impl<'a> App {
             for item in &mut list.list.items {
                 if item.start_at.is_some() && item.end_at.is_none() && !item.paused {
                     if let Ok(time) = Duration::from_std(duration) {
-                        item.duration = item.duration + time.num_milliseconds();
+                        item.duration += time.num_milliseconds();
                     }
                 }
             }
@@ -199,27 +193,28 @@ impl<'a> App {
                 }
             }
         }
-        return None;
+        None
     }
 
     fn get_item(&mut self, list_index: usize, index: usize) -> Option<&mut Item> {
         if let Some(list) = self.group_list.items.get_mut(list_index) {
-            return list.list.items.get_mut(index);
+            list.list.items.get_mut(index)
+        }else{
+            None
         }
-        return None;
     }
 
     fn get_selected_item(&mut self) -> Option<&mut Item> {
         if let Some((list_index, index)) = self.selected_item() {
-            return self.get_item(list_index, index);
+            self.get_item(list_index, index)
         } else {
-            return None;
+            None
         }
     }
 
     fn show_dialog<B: Backend>(&mut self, frame: &mut Frame<B>) {
         let size = frame.size();
-        let dialog_title = if let Some(_) = self.active_list {
+        let dialog_title = if self.active_list.is_some() {
             " New Item "
         } else {
             " New List "
@@ -313,11 +308,9 @@ impl<'a> App {
                         if let Some(index) = list.state.selected() {
                             list.items.remove(index);
                         }
-                    } else {
-                        if let Some(index) = self.group_list.state.selected() {
-                            self.group_list.items.remove(index);
-                            self.group_list.state.select(None);
-                        }
+                    } else if let Some(index) = self.group_list.state.selected() {
+                        self.group_list.items.remove(index);
+                        self.group_list.state.select(None);
                     }
                 }
                 (KeyCode::Char('s'), KeyModifiers::ALT) => {
@@ -506,12 +499,10 @@ impl<'a> App {
 
                         let paused = if item.paused {
                             "Paused"
+                        } else if item.start_at.is_some() && item.end_at.is_none() {
+                            "In progress"
                         } else {
-                            if item.start_at.is_some() && item.end_at.is_none() {
-                                "In progress"
-                            } else {
-                                ""
-                            }
+                            ""
                         };
 
                         let mut info = Text::default();
