@@ -34,6 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (tx, rx) = mpsc::channel();
 
     let tick_rate = Duration::from_millis(500);
+    let auto_safe_interval = Duration::from_secs(10);
 
     thread::spawn(move || {
         let mut last_tick = Instant::now();
@@ -58,6 +59,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     terminal.clear()?;
 
+    let mut time_passed = Duration::ZERO;
     loop {
         terminal.draw(|f| app.draw(f))?;
         match rx.recv()? {
@@ -79,7 +81,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                     app.event(x, modi);
                 }
             },
-            Event::Tick(duration) => app.add_time(duration),
+            Event::Tick(duration) => {
+                if time_passed > auto_safe_interval {
+                    fs::write("db.toml", toml::to_string(&app).unwrap())?;
+                    time_passed = Duration::ZERO;
+                } else {
+                    time_passed = time_passed + duration;
+                }
+                app.add_time(duration)
+            }
         };
     }
 }

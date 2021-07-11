@@ -196,7 +196,7 @@ impl<'a> App {
     fn get_item(&mut self, list_index: usize, index: usize) -> Option<&mut Item> {
         if let Some(list) = self.group_list.items.get_mut(list_index) {
             list.list.items.get_mut(index)
-        }else{
+        } else {
             None
         }
     }
@@ -268,7 +268,7 @@ impl<'a> App {
         frame.render_widget(title_label, dialog_layout[0]);
         frame.render_widget(title, dialog_layout[1]);
 
-        if self.active_list.is_some(){
+        if self.active_list.is_some() {
             let desc_label = Paragraph::new(Text::from("Description"))
                 .style(Style::default().fg(Color::White).bg(Color::Blue))
                 .alignment(Alignment::Left)
